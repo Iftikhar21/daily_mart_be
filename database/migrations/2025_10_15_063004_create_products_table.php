@@ -13,9 +13,12 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('branch_id')->constrained('branches');
+            $table->string('kode_produk');
             $table->string('nama_produk');
             $table->string('satuan', 20)->nullable();
             $table->decimal('harga', 12, 2);
+            $table->string("gambar")->nullable();
             $table->timestamps();
         });
     }
