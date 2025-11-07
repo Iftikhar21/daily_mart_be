@@ -2,121 +2,148 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\StockRequest;
+use App\Models\Stock;
+use App\Models\Product;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class StockRequestController extends Controller
 {
-    // GET /api/stock-requests
-    public function index()
+    /**
+     * PETUGAS: Buat permintaan stok
+     */
+    public function store(Request $request)
     {
-        $user = Auth::user();
-        // Kalau admin, lihat semua, kalau user, lihat miliknya sendiri
-        if ($user->role === 'admin') {
-            $requests = StockRequest::with(['branch', 'petugas', 'product'])->get();
-        } else {
-            $requests = StockRequest::with(['branch', 'petugas', 'product'])
-                ->where('petugas_id', $user->id)
-                ->get();
+        $user = auth()->user();
+
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'qty_request' => 'required|integer|min:1',
+            'keterangan' => 'nullable|string|max:255',
+        ]);
+
+        // 🔹 Ambil data petugas (biar tau dia dari branch mana)
+        $petugas = \App\Models\Petugas::where('user_id', $user->id)->first();
+
+        if (!$petugas) {
+            return response()->json([
+                'message' => 'Data petugas tidak ditemukan.'
+            ], 404);
         }
+
+        // 🔹 Buat request stok baru
+        $stockRequest = StockRequest::create([
+            'branch_id'   => $petugas->branch_id, // ✅ otomatis ambil dari cabang petugas
+            'petugas_id'  => $petugas->id,
+            'product_id'  => $request->product_id,
+            'qty_request' => $request->qty_request,
+            'keterangan'  => $request->keterangan,
+            'status'      => 'pending',
+        ]);
+
+        return response()->json([
+            'message' => 'Permintaan stok berhasil dibuat.',
+            'data'    => $stockRequest
+        ], 201);
+    }
+
+    /**
+     * PETUGAS: Lihat permintaan miliknya sendiri
+     */
+    public function myRequests()
+    {
+        $petugas = Auth::user();
+
+        $requests = StockRequest::with(['product'])
+            ->where('petugas_id', $petugas->id)
+            ->orderByDesc('created_at')
+            ->get();
 
         return response()->json($requests);
     }
 
-    // GET /api/stock-requests/{id}
+    /**
+     * ADMIN: Lihat semua permintaan stok
+     */
+    public function index()
+    {
+        $requests = StockRequest::with(['branch', 'product', 'petugas'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json($requests);
+    }
+
+    /**
+     * ADMIN: Lihat detail request
+     */
     public function show($id)
     {
-        $request = StockRequest::with(['branch', 'petugas', 'product'])->find($id);
-        if (!$request) return response()->json(['message' => 'Request not found'], 404);
-        return response()->json($request);
-    }
-
-    // POST /api/stock-requests
-    public function store(Request $request)
-    {
-        $request->validate([
-            'branch_id' => 'required|exists:branches,id',
-            'product_id' => 'required|exists:products,id',
-            'qty_request' => 'required|integer|min:1',
-            'keterangan' => 'nullable|string',
-        ]);
-
-        $stockRequest = StockRequest::create([
-            'branch_id' => $request->branch_id,
-            'petugas_id' => Auth::id(),
-            'product_id' => $request->product_id,
-            'qty_request' => $request->qty_request,
-            'keterangan' => $request->keterangan,
-        ]);
-
-        return response()->json($stockRequest, 201);
-    }
-
-    // PUT /api/stock-requests/{id} (update qty/keterangan)
-    public function update(Request $request, $id)
-    {
-        $stockRequest = StockRequest::find($id);
-        if (!$stockRequest) return response()->json(['message' => 'Request not found'], 404);
-
-        // User hanya bisa update request sendiri dan status masih pending
-        if ($stockRequest->petugas_id != Auth::id() || $stockRequest->status != 'pending') {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $request->validate([
-            'qty_request' => 'sometimes|integer|min:1',
-            'keterangan' => 'nullable|string',
-        ]);
-
-        $stockRequest->update($request->only(['qty_request', 'keterangan']));
-
+        $stockRequest = StockRequest::with(['branch', 'product', 'petugas'])->findOrFail($id);
         return response()->json($stockRequest);
     }
 
-    // DELETE /api/stock-requests/{id}
-    public function destroy($id)
+    /**
+     * ADMIN: Approve permintaan stok
+     */
+    public function approve(Request $request, $id)
     {
-        $stockRequest = StockRequest::find($id);
-        if (!$stockRequest) return response()->json(['message' => 'Request not found'], 404);
+        $stockRequest = StockRequest::findOrFail($id);
 
-        // Hanya user pemilik atau admin bisa hapus
-        $user = Auth::user();
-        if ($stockRequest->petugas_id != $user->id && $user->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        if ($stockRequest->status !== 'pending') {
+            return response()->json(['message' => 'Permintaan ini sudah diproses.'], 400);
         }
 
-        $stockRequest->delete();
-        return response()->json(['message' => 'Request deleted']);
+        // Tambahkan stok di tabel `stocks`
+        $stock = Stock::firstOrCreate(
+            [
+                'branch_id' => $stockRequest->branch_id,
+                'product_id' => $stockRequest->product_id
+            ],
+            ['qty' => 0]
+        );
+
+        $stock->qty += $stockRequest->qty_request;
+        $stock->save();
+
+        // Update status permintaan
+        $stockRequest->status = 'approved';
+        $stockRequest->save();
+
+        return response()->json([
+            'message' => 'Permintaan stok disetujui dan stok berhasil ditambahkan.',
+            'data' => $stockRequest
+        ]);
     }
 
-    // PATCH /api/stock-requests/{id}/approve
-    public function approve($id)
+    /**
+     * ADMIN: Reject permintaan stok
+     */
+    public function reject($id, Request $request)
     {
-        $user = Auth::user();
-        if ($user->role !== 'admin') return response()->json(['message' => 'Unauthorized'], 403);
+        $request->validate([
+            'reason' => 'required|string'
+        ]);
 
-        $request = StockRequest::find($id);
-        if (!$request) return response()->json(['message' => 'Request not found'], 404);
+        $stockRequest = StockRequest::find($id);
 
-        $request->status = 'approved';
-        $request->save();
+        if (!$stockRequest) {
+            return response()->json(['message' => 'Request stok tidak ditemukan.'], 404);
+        }
 
-        return response()->json($request);
-    }
+        if ($stockRequest->status !== 'pending') {
+            return response()->json(['message' => 'Hanya request yang masih pending yang dapat ditolak.'], 400);
+        }
 
-    // PATCH /api/stock-requests/{id}/reject
-    public function reject($id)
-    {
-        $user = Auth::user();
-        if ($user->role !== 'admin') return response()->json(['message' => 'Unauthorized'], 403);
+        $stockRequest->update([
+            'status' => 'rejected',
+            'keterangan' => $request->reason
+        ]);
 
-        $request = StockRequest::find($id);
-        if (!$request) return response()->json(['message' => 'Request not found'], 404);
-
-        $request->status = 'rejected';
-        $request->save();
-
-        return response()->json($request);
+        return response()->json([
+            'message' => 'Request stok berhasil ditolak.',
+            'data' => $stockRequest
+        ], 200);
     }
 }

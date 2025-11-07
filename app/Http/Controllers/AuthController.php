@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Admin;
+use App\Models\Kurir;
+use App\Models\Petugas;
+use App\Models\Pelanggan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -12,27 +16,26 @@ class AuthController extends Controller
     // REGISTER
     public function register(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
-            'role' => 'in:admin,petugas,user'
         ]);
 
+        // Semua yang register lewat mobile otomatis jadi user
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role ?? 'user',
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => bcrypt($validated['password']),
+            'role' => 'user',
         ]);
 
         return response()->json([
-            'message' => 'Register berhasil!',
+            'message' => 'Registrasi berhasil!',
             'user' => $user
-        ], 201);
+        ]);
     }
 
-    // LOGIN
     public function login(Request $request)
     {
         $request->validate([
@@ -48,11 +51,21 @@ class AuthController extends Controller
             ]);
         }
 
-        // Hapus token lama (opsional)
+        // Hapus token lama
         $user->tokens()->delete();
 
         // Buat token baru
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        // ✅ Jika role user dan belum punya data pelanggan, buat otomatis
+        if ($user->role === 'user' && !Pelanggan::where('user_id', $user->id)->exists()) {
+            Pelanggan::create([
+                'user_id' => $user->id,
+                'alamat' => null,
+                'no_hp' => null,
+                'is_guest' => false,
+            ]);
+        }
 
         return response()->json([
             'message' => 'Login berhasil!',
@@ -65,11 +78,10 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-
         return response()->json(['message' => 'Logout berhasil!']);
     }
 
-    // GET PROFILE
+    // PROFILE
     public function profile(Request $request)
     {
         return response()->json($request->user());

@@ -22,4 +22,14 @@ class Product extends Model
     {
         return $this->belongsTo(Branch::class);
     }
+
+    public function stocks()
+    {
+        return $this->hasMany(Stock::class);
+    }
+
+    public function transactionDetails()
+    {
+        return $this->hasMany(TransactionDetail::class);
+    }
 }

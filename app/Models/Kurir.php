@@ -5,18 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Branch extends Model
+class Kurir extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'nama_cabang',
-        'alamat',
-        'no_telp',
+        'user_id',
+        'no_hp',
     ];
 
-    public function transactions()
+    public function user()
     {
-        return $this->hasMany(Transaction::class);
+        return $this->belongsTo(User::class);
     }
 }
