@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('branches', function (Blueprint $table) {
@@ -16,15 +13,14 @@ return new class extends Migration
             $table->string('nama_cabang');
             $table->text('alamat')->nullable();
             $table->string('no_telp', 20)->nullable();
+            $table->decimal('latitude', 10, 7)->nullable();
+            $table->decimal('longitude', 10, 7)->nullable();
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('branchs');
+        Schema::dropIfExists('branches');
     }
 };

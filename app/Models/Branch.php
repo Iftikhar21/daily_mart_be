@@ -9,14 +9,13 @@ class Branch extends Model
 {
     use HasFactory;
 
+    protected $table = 'branches';
+
     protected $fillable = [
         'nama_cabang',
         'alamat',
         'no_telp',
+        'latitude',
+        'longitude',
     ];
-
-    public function transactions()
-    {
-        return $this->hasMany(Transaction::class);
-    }
 }

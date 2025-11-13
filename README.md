@@ -70,14 +70,14 @@ php artisan key:generate
 
 ---
 
-### 4. Run migrations and push seed data
+### 4. Run migrations and seed data
 
 ```bash
 php artisan migrate
-php artisan db:push
+php artisan db:seed
 ```
 
-> The `db:push` command will populate default data (roles, users, etc.) into the database.
+> The `db:seed` command will populate default data (roles, users, etc.) into the database.
 
 ---
 
@@ -144,7 +144,7 @@ export const BASE_URL = 'http://192.168.112.171:8000/api';
 | `composer install`                                     | Install dependencies           |
 | `php artisan key:generate`                             | Generate Laravel app key       |
 | `php artisan migrate`                                  | Run all migrations             |
-| `php artisan db:push`                                  | Seed database with sample data |
+| `php artisan db:seed`                                  | Seed database with sample data |
 | `php artisan serve --host=192.168.xxx.xxx --port=8000` | Run local server               |
 | `php artisan route:list`                               | Check all API routes           |
 
@@ -175,7 +175,7 @@ export const BASE_URL = 'http://192.168.112.171:8000/api';
 | Install dependencies | `composer install`                                     |
 | Setup environment    | `cp .env.example .env`                                 |
 | Migrate database     | `php artisan migrate`                                  |
-| Push default data    | `php artisan db:push`                                  |
+| Seed default data    | `php artisan db:seed`                                  |
 | Run server           | `php artisan serve --host=192.168.xxx.xxx --port=8000` |
 
 ---

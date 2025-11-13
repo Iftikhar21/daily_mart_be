@@ -7,15 +7,26 @@ use App\Http\Controllers\KurirController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\PetugasController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\StockRequestController;
+use App\Http\Controllers\PelangganController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\StockRequestController;
+use App\Http\Controllers\KategoriProdukController;
+use App\Http\Controllers\FavoriteProductController;
+use App\Http\Controllers\PelangganProductController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
 
+
     // 🔹 Semua role (admin, petugas, kurir, pelanggan)
+
+    /*
+    |------------------------------------------------------------------
+    | 🧩 PELANGGAN
+    |------------------------------------------------------------------
+    */
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -53,10 +64,15 @@ Route::middleware('auth:sanctum')->group(function () {
     | 🧩 PELANGGAN
     |------------------------------------------------------------------
     */
-    Route::middleware('role:pelanggan')->group(function () {
+    Route::middleware('role:user')->group(function () {
+        // Dashboard
+        Route::get('/pelanggan/products', [PelangganProductController::class, 'index']);
         // 💻 Transaksi Online
         Route::post('/transactions/online', [TransactionController::class, 'storeOnline']); // buat transaksi online
         Route::get('/transactions/online', [TransactionController::class, 'listOnline']);   // lihat riwayat transaksi online
+
+        Route::post('/favorites/{productId}/toggle', [FavoriteProductController::class, 'toggle']);
+        Route::get('/favorites', [FavoriteProductController::class, 'list']);
     });
 
     /*
@@ -72,6 +88,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/products/{id}', [ProductController::class, 'destroy']);
     });
 
+    Route::middleware('role:user,admin')->group(function () {
+        Route::post('/pelanggan', [PelangganController::class, 'store']);
+        Route::put('/pelanggan/{id}', [PelangganController::class, 'update']);
+    });
+
+    Route::middleware('role:user')->group(function () {
+        Route::post('/pelanggan', [PelangganController::class, 'store']);
+    });
     /*
     |------------------------------------------------------------------
     | 🧩 ADMIN ONLY
@@ -100,7 +124,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/stock-requests/{id}/reject', [StockRequestController::class, 'reject']);
 
         // Transaksi Online Management
-        Route::get('/transactions', [TransactionController::class, 'index']); // semua transaksi
-        Route::put('/transactions/{id}/status', [TransactionController::class, 'updateStatus']); // update status
+        Route::get('/transactions', [TransactionController::class, 'index']);
+        Route::put('/transactions/{id}/status', [TransactionController::class, 'updateStatus']);
+
+        // ✅ Kategori Produk Management
+        Route::apiResource('kategori-produk', KategoriProdukController::class);
     });
 });

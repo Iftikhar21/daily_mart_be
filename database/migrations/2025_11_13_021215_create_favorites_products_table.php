@@ -11,16 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pelanggan', function (Blueprint $table) {
+        Schema::create('favorites_products', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('branch_id')->nullable()->constrained('branches')->onDelete('set null');
-            $table->text('alamat')->nullable();
-            $table->string('no_hp', 20)->nullable();
-            $table->boolean('is_guest')->default(false);
-            $table->decimal('latitude', 10, 7)->nullable();
-            $table->decimal('longitude', 10, 7)->nullable();
+            $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
             $table->timestamps();
+
+            $table->unique(['user_id', 'product_id']);
         });
     }
 
@@ -29,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('pelanggan');
+        Schema::dropIfExists('favorites_products');
     }
 };

@@ -16,6 +16,9 @@ class Pelanggan extends Model
         'alamat',
         'no_hp',
         'is_guest',
+        'latitude',
+        'longitude',
+        'branch_id',
     ];
 
     /**

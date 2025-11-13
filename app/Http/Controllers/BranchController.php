@@ -30,6 +30,8 @@ class BranchController extends Controller
             'nama_cabang' => 'required|string|max:255',
             'alamat' => 'nullable|string',
             'no_telp' => 'nullable|string|max:20',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
         ]);
 
         $branch = Branch::create($request->all());
@@ -48,6 +50,8 @@ class BranchController extends Controller
             'nama_cabang' => 'required|string|max:255',
             'alamat' => 'nullable|string',
             'no_telp' => 'nullable|string|max:20',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
         ]);
 
         $branch->update($request->all());

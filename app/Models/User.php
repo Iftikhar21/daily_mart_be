@@ -48,6 +48,18 @@ class User extends Authenticatable
         ];
     }
 
+    // app/Models/User.php
+    public function pelanggan()
+    {
+        return $this->hasOne(\App\Models\Pelanggan::class, 'user_id');
+    }
+
+    public function favorites()
+    {
+        return $this->belongsToMany(Product::class, 'favorites', 'user_id', 'product_id')
+            ->withTimestamps();
+    }
+
     public function transaksiSebagaiPelanggan()
     {
         return $this->hasMany(Transaction::class, 'pelanggan_id');
