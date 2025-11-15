@@ -20,8 +20,9 @@ return new class extends Migration
             $table->decimal('total', 12, 2);
             $table->enum('payment_method', ['cash', 'transfer', 'ewallet'])->nullable();
             $table->enum('status', ['pending', 'paid', 'completed', 'cancelled'])->default('pending');
-            $table->string('nama_pembeli')->nullable();
-            $table->text('alamat_pembeli')->nullable();
+            // Di migration transactions, tambahkan:
+            $table->enum('delivery_status', ['pending', 'assigned', 'picked_up', 'on_delivery', 'delivered'])->default('pending');
+            $table->foreignId('kurir_id')->nullable()->constrained('kurirs'); // relasi ke tabel petugas
             $table->timestamps();
         });
     }

@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Stock;
 use App\Models\Product;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
@@ -59,12 +60,18 @@ class ProductController extends Controller
             'gambar'      => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        // Upload gambar kalau ada
         if ($request->hasFile('gambar')) {
             $data['gambar'] = $request->file('gambar')->store('products', 'public');
         }
 
         $product = Product::create($data);
+
+        // Tambahkan stok awal
+        Stock::create([
+            'branch_id'  => $product->branch_id,
+            'product_id' => $product->id,
+            'qty'        => 0, // default
+        ]);
 
         $product->gambar_url = $product->gambar
             ? asset('storage/' . $product->gambar)

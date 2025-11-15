@@ -17,8 +17,8 @@ class Transaction extends Model
         'total',
         'payment_method',
         'status',
-        'nama_pembeli',
-        'alamat_pembeli',
+        'delivery_status',
+        'kurir_id',
     ];
 
     protected $casts = [
@@ -44,9 +44,20 @@ class Transaction extends Model
         return $this->belongsTo(User::class, 'petugas_id');
     }
 
+    // 🔗 Relasi ke kurir
+    public function kurir()
+    {
+        return $this->belongsTo(Kurir::class, 'kurir_id');
+    }
+
     // 🔗 Relasi ke detail transaksi
     public function details()
     {
         return $this->hasMany(TransactionDetail::class);
+    }
+
+    public function deliveryUpdates()
+    {
+        return $this->hasMany(DeliveryUpdate::class);
     }
 }

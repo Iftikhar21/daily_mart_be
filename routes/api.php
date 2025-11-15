@@ -19,17 +19,46 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
 
-
     // 🔹 Semua role (admin, petugas, kurir, pelanggan)
+    Route::get('/profile', [AuthController::class, 'profile']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+
+    /*
+    |------------------------------------------------------------------
+    | 🛒 KERANJANG (Shared untuk Pelanggan dan Petugas)
+    |------------------------------------------------------------------
+    */
+    Route::prefix('cart')->group(function () {
+        Route::get('/', [TransactionController::class, 'getCart']);
+        Route::post('/add', [TransactionController::class, 'addToCart']);
+        Route::put('/update/{id}', [TransactionController::class, 'updateCart']);
+        Route::delete('/remove/{id}', [TransactionController::class, 'removeFromCart']);
+        Route::delete('/clear', [TransactionController::class, 'clearCart']);
+    });
 
     /*
     |------------------------------------------------------------------
     | 🧩 PELANGGAN
     |------------------------------------------------------------------
     */
-    Route::get('/profile', [AuthController::class, 'profile']);
-    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::middleware('role:user')->group(function () {
+        // Dashboard
+        Route::get('/pelanggan/products', [PelangganProductController::class, 'index']);
 
+        // 💻 Transaksi Online
+        Route::post('/transactions/online/checkout', [TransactionController::class, 'checkoutOnline']);
+        Route::get('/transactions/online', [TransactionController::class, 'myOnlineTransactions']);
+        Route::put('/transactions/{id}/status', [TransactionController::class, 'updateStatus']); // ← PINDAH KE SINI
+        Route::put('/transactions/{id}/complete', [TransactionController::class, 'completeOrder']);
+
+        // Favorit
+        Route::post('/favorites/{productId}/toggle', [FavoriteProductController::class, 'toggle']);
+        Route::get('/favorites', [FavoriteProductController::class, 'list']); 
+
+        // 🚚 Tracking Updates (BARU - untuk lihat updates)
+        Route::get('/transactions/{id}/delivery-updates', [TransactionController::class, 'getDeliveryUpdates']);
+    });
+    
     /*
     |------------------------------------------------------------------
     | 🧩 PETUGAS
@@ -41,12 +70,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/petugas/profile', [PetugasController::class, 'updateProfile']);
 
         // 🧱 Stock Request
-        Route::post('/stock-requests', [StockRequestController::class, 'store']); // buat request stok
-        Route::get('/stock-requests/my', [StockRequestController::class, 'myRequests']); // lihat request sendiri
+        Route::post('/stock-requests', [StockRequestController::class, 'store']);
+        Route::get('/stock-requests/my', [StockRequestController::class, 'myRequests']);
 
         // 💰 Transaksi Offline
-        Route::post('/transactions/offline', [TransactionController::class, 'storeOffline']); // buat transaksi offline
-        Route::get('/transactions/offline', [TransactionController::class, 'listOffline']);   // lihat transaksi offline cabang
+        Route::post('/transactions/offline/checkout', [TransactionController::class, 'checkoutOffline']);
+        Route::get('/transactions/offline', [TransactionController::class, 'myOfflineTransactions']);
+
+        // Management Transaksi untuk Petugas
+        // Route::put('/transactions/{id}/status', [TransactionController::class, 'updateStatus']); // ← HAPUS DARI SINI
+        Route::get('/transactions/branch', [TransactionController::class, 'getBranchTransactions']);
+        Route::put('/transactions/{id}/assign-kurir', [TransactionController::class, 'assignKurir']);
+        Route::put('/transactions/{id}/delivery-status', [TransactionController::class, 'updateDeliveryStatus']);
     });
 
     /*
@@ -57,22 +92,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:kurir')->group(function () {
         Route::get('/kurir/me', [KurirController::class, 'me']);
         Route::put('/kurir/profile', [KurirController::class, 'updateProfile']);
-    });
 
-    /*
-    |------------------------------------------------------------------
-    | 🧩 PELANGGAN
-    |------------------------------------------------------------------
-    */
-    Route::middleware('role:user')->group(function () {
-        // Dashboard
-        Route::get('/pelanggan/products', [PelangganProductController::class, 'index']);
-        // 💻 Transaksi Online
-        Route::post('/transactions/online', [TransactionController::class, 'storeOnline']); // buat transaksi online
-        Route::get('/transactions/online', [TransactionController::class, 'listOnline']);   // lihat riwayat transaksi online
+        // Management Pengiriman
+        Route::get('/kurir/assigned-orders', [TransactionController::class, 'getAssignedOrders']);
+        Route::put('/transactions/{id}/update-delivery', [TransactionController::class, 'updateDeliveryStatus']);
 
-        Route::post('/favorites/{productId}/toggle', [FavoriteProductController::class, 'toggle']);
-        Route::get('/favorites', [FavoriteProductController::class, 'list']);
+        // 🚚 Tracking Updates (BARU)
+        Route::post('/transactions/{id}/delivery-updates', [TransactionController::class, 'addDeliveryUpdate']);
+        Route::put('/transactions/{id}/mark-delivered', [TransactionController::class, 'markAsDelivered']);
+        Route::get('/transactions/{id}/delivery-updates', [TransactionController::class, 'getDeliveryUpdates']);
     });
 
     /*
@@ -93,9 +121,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/pelanggan/{id}', [PelangganController::class, 'update']);
     });
 
-    Route::middleware('role:user')->group(function () {
-        Route::post('/pelanggan', [PelangganController::class, 'store']);
-    });
     /*
     |------------------------------------------------------------------
     | 🧩 ADMIN ONLY
@@ -104,6 +129,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:admin')->group(function () {
         // Branch Management
         Route::apiResource('branches', BranchController::class);
+
+        Route::post('/create-user', [AuthController::class, 'adminCreateUser']);
+        Route::put('/update-user/{id}', [AuthController::class, 'adminUpdateUser']);
+        Route::delete('/delete-user/{id}', [AuthController::class, 'adminDeleteUser']);
 
         // Admin Management
         Route::apiResource('admins', AdminController::class)->except(['create', 'edit']);
@@ -123,7 +152,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/stock-requests/{id}/approve', [StockRequestController::class, 'approve']);
         Route::put('/stock-requests/{id}/reject', [StockRequestController::class, 'reject']);
 
-        // Transaksi Online Management
+        // Transaksi Management
         Route::get('/transactions', [TransactionController::class, 'index']);
         Route::put('/transactions/{id}/status', [TransactionController::class, 'updateStatus']);
 

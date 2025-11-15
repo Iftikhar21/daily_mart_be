@@ -51,12 +51,22 @@ class User extends Authenticatable
     // app/Models/User.php
     public function pelanggan()
     {
-        return $this->hasOne(\App\Models\Pelanggan::class, 'user_id');
+        return $this->hasOne(Pelanggan::class, 'user_id');
+    }
+
+    public function petugas()
+    {
+        return $this->hasOne(Petugas::class, 'user_id');
+    }
+
+    public function kurir()
+    {
+        return $this->hasOne(Kurir::class, 'user_id');
     }
 
     public function favorites()
     {
-        return $this->belongsToMany(Product::class, 'favorites', 'user_id', 'product_id')
+        return $this->belongsToMany(Product::class, 'favorites_products', 'user_id', 'product_id')
             ->withTimestamps();
     }
 

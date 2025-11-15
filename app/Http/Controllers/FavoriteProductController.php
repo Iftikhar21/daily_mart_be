@@ -30,7 +30,21 @@ class FavoriteProductController extends Controller
     public function list(Request $request)
     {
         $user = $request->user();
-        $favorites = $user->favorites()->with('branch')->get();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // ambil semua produk yang difavoritkan user
+        $favorites = $user->favorites()
+            ->with(['branch', 'kategori'])
+            ->get()
+            ->map(function ($product) {
+                $product->gambar_url = $product->gambar
+                    ? asset('storage/' . $product->gambar)
+                    : asset('images/no-image.png');
+                return $product;
+            });
 
         return response()->json($favorites);
     }
