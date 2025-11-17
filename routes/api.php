@@ -45,17 +45,21 @@ Route::middleware('auth:sanctum')->group(function () {
         // Dashboard
         Route::get('/pelanggan/products', [PelangganProductController::class, 'index']);
 
+        // Profile Pelanggan - AUTO CREATE jika belum ada
+        Route::get('/pelanggan/profile', [PelangganController::class, 'show']);
+        Route::put('/pelanggan/profile', [PelangganController::class, 'update']); // 👈 INI YANG DIGUNAKAN
+
         // 💻 Transaksi Online
         Route::post('/transactions/online/checkout', [TransactionController::class, 'checkoutOnline']);
         Route::get('/transactions/online', [TransactionController::class, 'myOnlineTransactions']);
-        Route::put('/transactions/{id}/status', [TransactionController::class, 'updateStatus']); // ← PINDAH KE SINI
+        Route::put('/transactions/{id}/status', [TransactionController::class, 'updateStatus']);
         Route::put('/transactions/{id}/complete', [TransactionController::class, 'completeOrder']);
 
         // Favorit
         Route::post('/favorites/{productId}/toggle', [FavoriteProductController::class, 'toggle']);
-        Route::get('/favorites', [FavoriteProductController::class, 'list']); 
+        Route::get('/favorites', [FavoriteProductController::class, 'list']);
 
-        // 🚚 Tracking Updates (BARU - untuk lihat updates)
+        // 🚚 Tracking Updates
         Route::get('/transactions/{id}/delivery-updates', [TransactionController::class, 'getDeliveryUpdates']);
     });
     
@@ -116,11 +120,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/products/{id}', [ProductController::class, 'destroy']);
     });
 
-    Route::middleware('role:user,admin')->group(function () {
-        Route::post('/pelanggan', [PelangganController::class, 'store']);
-        Route::put('/pelanggan/{id}', [PelangganController::class, 'update']);
-    });
-
     /*
     |------------------------------------------------------------------
     | 🧩 ADMIN ONLY
@@ -154,9 +153,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Transaksi Management
         Route::get('/transactions', [TransactionController::class, 'index']);
-        Route::put('/transactions/{id}/status', [TransactionController::class, 'updateStatus']);
 
         // ✅ Kategori Produk Management
         Route::apiResource('kategori-produk', KategoriProdukController::class);
     });
+
+    Route::get('/categories', [KategoriProdukController::class, 'index']);
+
+    Route::get('/transactions/{id}', [TransactionController::class, 'show']);
 });

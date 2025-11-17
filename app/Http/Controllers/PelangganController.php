@@ -2,74 +2,126 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-use App\Models\Pelanggan;
+use App\Models\User;
 use App\Models\Branch;
+use App\Models\Pelanggan;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 class PelangganController extends Controller
 {
-    // 🟢 Tambah pelanggan baru
-    public function store(Request $request)
+    // 🟢 Get atau create pelanggan data
+    public function show()
     {
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'alamat' => 'required|string',
-            'no_hp' => 'nullable|string|max:20',
-        ]);
+        $user = auth()->user();
 
-        // 🔍 Ambil latitude & longitude dari alamat
-        $geo = $this->getCoordinates($request->alamat);
-
-        // ❗ Tentukan branch terdekat
-        $nearestBranch = $this->getNearestBranch($geo['lat'], $geo['lon']);
-
-        $pelanggan = Pelanggan::create([
-            'user_id' => $request->user_id,
-            'alamat' => $request->alamat,
-            'no_hp' => $request->no_hp,
-            'latitude' => $geo['lat'],
-            'longitude' => $geo['lon'],
-            'branch_id' => $nearestBranch ? $nearestBranch->id : null,
-        ]);
+        // 🔥 AUTO CREATE PELANGGAN JIKA BELUM ADA
+        if (!$user->pelanggan) {
+            // Buat pelanggan dengan alamat default
+            $pelanggan = $this->createDefaultPelanggan($user);
+            $user->load('pelanggan'); // Reload relationship
+        }
 
         return response()->json([
-            'message' => 'Data pelanggan berhasil disimpan',
-            'data' => $pelanggan,
+            'data' => [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email
+                ],
+                'pelanggan' => $user->pelanggan
+            ]
         ]);
     }
 
-    // 🟡 Update pelanggan (alamat berubah → auto update koordinat + branch)
-    public function update(Request $request, $id)
+    // 🟡 Update pelanggan
+    public function update(Request $request)
     {
-        $pelanggan = Pelanggan::findOrFail($id);
+        $user = auth()->user();
+
+        Log::info('Update profile request:', $request->all()); // 👈 TAMBAH LOG
+
+        // 🔥 AUTO CREATE PELANGGAN JIKA BELUM ADA
+        if (!$user->pelanggan) {
+            $this->createDefaultPelanggan($user);
+            $user->load('pelanggan');
+        }
+
+        $pelanggan = $user->pelanggan;
 
         $request->validate([
+            'nama' => 'sometimes|string|max:255',
             'alamat' => 'sometimes|string',
             'no_hp' => 'sometimes|string|max:20',
         ]);
 
+        $updateData = [];
+
+        // Update nama jika ada
+        if ($request->has('nama')) {
+            $user->name = $request->nama;
+            $user->save();
+            Log::info('Updated user name to: ' . $request->nama); // 👈 LOG
+        }
+
         // 🔍 Kalau alamat diubah → update lat & lon dan branch terdekat
-        if ($request->has('alamat')) {
+        if ($request->has('alamat') && $request->alamat !== $pelanggan->alamat) {
+            Log::info('Updating address from: ' . $pelanggan->alamat . ' to: ' . $request->alamat); // 👈 LOG
+
             $geo = $this->getCoordinates($request->alamat);
-            $pelanggan->latitude = $geo['lat'];
-            $pelanggan->longitude = $geo['lon'];
-            $pelanggan->alamat = $request->alamat;
+
+            $updateData['alamat'] = $request->alamat;
+            $updateData['latitude'] = $geo['lat'];
+            $updateData['longitude'] = $geo['lon'];
 
             // update branch_id berdasarkan lokasi baru
             $nearestBranch = $this->getNearestBranch($geo['lat'], $geo['lon']);
-            $pelanggan->branch_id = $nearestBranch ? $nearestBranch->id : null;
+            $updateData['branch_id'] = $nearestBranch ? $nearestBranch->id : null;
+
+            Log::info('New coordinates: ' . $geo['lat'] . ', ' . $geo['lon']); // 👈 LOG
         }
 
         if ($request->has('no_hp')) {
-            $pelanggan->no_hp = $request->no_hp;
+            $updateData['no_hp'] = $request->no_hp;
         }
 
-        $pelanggan->save();
+        // Update data pelanggan
+        if (!empty($updateData)) {
+            $pelanggan->update($updateData);
+            Log::info('Updated pelanggan data:', $updateData); // 👈 LOG
+        }
+
+        // Reload relationship
+        $pelanggan->refresh();
+        $user->refresh();
 
         return response()->json([
             'message' => 'Data pelanggan berhasil diperbarui',
-            'data' => $pelanggan,
+            'data' => [
+                'pelanggan' => $pelanggan,
+                'user' => [
+                    'name' => $user->name,
+                    'email' => $user->email
+                ]
+            ]
+        ]);
+    }
+
+    // 🔧 Fungsi untuk create pelanggan default
+    private function createDefaultPelanggan(User $user)
+    {
+        $defaultAlamat = "Alamat belum diatur";
+        $geo = $this->getCoordinates($defaultAlamat);
+        $nearestBranch = $this->getNearestBranch($geo['lat'], $geo['lon']);
+
+        return Pelanggan::create([
+            'user_id' => $user->id,
+            'alamat' => $defaultAlamat,
+            'no_hp' => null,
+            'latitude' => $geo['lat'],
+            'longitude' => $geo['lon'],
+            'branch_id' => $nearestBranch ? $nearestBranch->id : null,
         ]);
     }
 
@@ -84,8 +136,8 @@ class PelangganController extends Controller
         if ($response->successful() && count($response->json()) > 0) {
             $data = $response->json()[0];
             return [
-                'lat' => $data['lat'],
-                'lon' => $data['lon'],
+                'lat' => (float) $data['lat'],
+                'lon' => (float) $data['lon'],
             ];
         }
 
@@ -96,7 +148,14 @@ class PelangganController extends Controller
     // 🔧 Fungsi bantu untuk cari branch terdekat
     private function getNearestBranch($lat, $lon)
     {
-        $branches = Branch::all();
+        if (!$lat || !$lon) {
+            return null;
+        }
+
+        $branches = Branch::whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->get();
+
         $nearestBranch = null;
         $shortestDistance = PHP_INT_MAX;
 

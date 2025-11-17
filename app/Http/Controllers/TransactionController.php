@@ -3,16 +3,43 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cart;
-use App\Models\DeliveryUpdate;
 use App\Models\Stock;
 use App\Models\Product;
-use App\Models\Transaction;
 use Illuminate\Http\Request;
+use App\Models\DeliveryUpdate;
+use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class TransactionController extends Controller
 {
+
+    // Di TransactionController.php - tambah method ini
+    public function show($id)
+    {
+        $user = auth()->user();
+
+        if ($user->role === 'user') {
+            $pelangganId = $user->pelanggan->id;
+            $transaction = Transaction::with([
+                'details.product',
+                'branch',
+                'pelanggan'
+            ])
+                ->where('id', $id)
+                ->where('pelanggan_id', $pelangganId)
+                ->firstOrFail();
+        } else {
+            $transaction = Transaction::with([
+                'details.product',
+                'branch',
+                'pelanggan'
+            ])->findOrFail($id);
+        }
+
+        return response()->json($transaction);
+    }
     /*
     |--------------------------------------------------------------------------
     | 🛒 KERANJANG BELANJA (Shared untuk Online & Offline)
@@ -451,6 +478,7 @@ class TransactionController extends Controller
         return response()->json($updates);
     }
 
+    // Di TransactionController.php - tambahkan method completeOrder
     public function completeOrder($id)
     {
         $pelangganId = auth()->user()->pelanggan->id;
@@ -485,17 +513,40 @@ class TransactionController extends Controller
 
     public function myOnlineTransactions()
     {
-        $pelangganId = auth()->user()->pelanggan->id;
+        $user = auth()->user();
 
-        if (!$pelangganId) {
-            return response()->json(['message' => 'Data pelanggan tidak ditemukan'], 400);
+        // Debug: cek user dan role
+        Log::info('User:', [$user->id, $user->role, $user->email]);
+
+        // Cek relasi pelanggan
+        if (!$user->pelanggan) {
+            Log::error('Pelanggan not found for user:', [$user->id]);
+            return response()->json([
+                'message' => 'Data pelanggan tidak ditemukan untuk user ini',
+                'user_role' => $user->role
+            ], 404);
         }
 
-        $transactions = Transaction::with(['details.product', 'branch', 'kurir'])
+        $pelangganId = $user->pelanggan->id;
+
+        $transactions = Transaction::with([
+            'details.product',
+            'branch',
+            'kurir.user',
+            'deliveryUpdates.kurir.user'
+        ])
             ->where('pelanggan_id', $pelangganId)
             ->where('is_online', true)
             ->orderBy('created_at', 'desc')
             ->get();
+
+        // Cek jika transaksi kosong
+        if ($transactions->isEmpty()) {
+            return response()->json([
+                'message' => 'Belum ada transaksi online',
+                'data' => []
+            ], 200);
+        }
 
         return response()->json($transactions);
     }
@@ -535,7 +586,12 @@ class TransactionController extends Controller
             return response()->json(['message' => 'Data kurir tidak ditemukan'], 404);
         }
 
-        $orders = Transaction::with(['details.product', 'branch', 'pelanggan'])
+        $orders = Transaction::with([
+            'details.product',
+            'branch',
+            'pelanggan',
+            'kurir.user' // ⬅️ tambahkan ini untuk menampilkan nama kurir
+        ])
             ->where('kurir_id', $kurir->id)
             ->where('is_online', true)
             ->orderBy('created_at', 'desc')
@@ -575,13 +631,21 @@ class TransactionController extends Controller
 
     public function updateStatus(Request $request, $id)
     {
+
+        $pelanggan = auth()->user()->pelanggan;
+
+        if (!$pelanggan) {
+            return response()->json(['message' => 'Data pelanggan tidak ditemukan'], 400);
+        }
+
+        $transaction = Transaction::where('id', $id)
+            ->where('pelanggan_id', $pelanggan->id)  // FIX: gunakan pelanggan->id
+            ->firstOrFail();
+
+
         $request->validate([
             'status' => 'required|in:paid,cancelled'
         ]);
-
-        $transaction = Transaction::where('pelanggan_id', auth()->id())
-            ->where('is_online', true)
-            ->findOrFail($id);
 
         // Validasi: hanya transaksi dengan status pending yang bisa diupdate
         if ($transaction->status !== 'pending') {
