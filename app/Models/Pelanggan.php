@@ -28,4 +28,12 @@ class Pelanggan extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Relasi ke tabel branch
+     */
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
 }

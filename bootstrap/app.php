@@ -20,7 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             EnsureFrontendRequestsAreStateful::class,
         ]);
 
-        // ✅ Daftarkan alias middleware kustom
+        // ✅ Daftarkan alias middleware kustom 
         $middleware->alias([
             'role' => RoleMiddleware::class,
         ]);

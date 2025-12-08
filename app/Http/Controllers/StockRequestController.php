@@ -68,7 +68,7 @@ class StockRequestController extends Controller
      */
     public function index()
     {
-        $requests = StockRequest::with(['branch', 'product', 'petugas'])
+        $requests = StockRequest::with(['branch', 'product', 'petugas', 'petugas.user'])
             ->orderByDesc('created_at')
             ->get();
 

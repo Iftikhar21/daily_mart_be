@@ -45,6 +45,30 @@ class ProductController extends Controller
         return response()->json($product);
     }
 
+    public function getByBranch($branch_id)
+    {
+        $products = Product::with(['branch', 'kategori', 'stocks'])
+            ->where('branch_id', $branch_id)
+            ->get();
+
+        if ($products->isEmpty()) {
+            return response()->json([
+                'message' => 'Produk pada cabang ini tidak ditemukan'
+            ], 404);
+        }
+
+        // Tambahkan gambar_url untuk setiap produk
+        $products->map(function ($product) {
+            $product->gambar_url = $product->gambar
+                ? asset('storage/' . $product->gambar)
+                : asset('images/no-image.png');
+
+            return $product;
+        });
+
+        return response()->json($products);
+    }
+
     /**
      * POST /api/products
      */

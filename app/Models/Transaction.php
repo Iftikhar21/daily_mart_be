@@ -35,13 +35,13 @@ class Transaction extends Model
     // 🔗 Relasi ke pelanggan
     public function pelanggan()
     {
-        return $this->belongsTo(User::class, 'pelanggan_id');
+        return $this->belongsTo(Pelanggan::class, 'pelanggan_id');
     }
 
     // 🔗 Relasi ke petugas
     public function petugas()
     {
-        return $this->belongsTo(User::class, 'petugas_id');
+        return $this->belongsTo(Petugas::class, 'petugas_id');
     }
 
     // 🔗 Relasi ke kurir

@@ -9,6 +9,7 @@ use App\Models\Petugas;
 use App\Models\Pelanggan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -84,7 +85,73 @@ class AuthController extends Controller
     // PROFILE
     public function profile(Request $request)
     {
-        return response()->json($request->user());
+        $user = $request->user();
+
+        // Load relationships based on role
+        $user->load($user->role);
+
+        return response()->json($user);
+    }
+
+    /**
+     * Update user profile (including admin)
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:users,email,' . $user->id,
+            'current_password' => 'sometimes|required_with:password',
+            'password' => 'sometimes|min:6|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Check current password if changing password
+        if ($request->filled('password')) {
+            if (!$request->filled('current_password')) {
+                return response()->json([
+                    'message' => 'Password saat ini diperlukan untuk mengubah password'
+                ], 422);
+            }
+
+            if (!Hash::check($request->current_password, $user->password)) {
+                return response()->json([
+                    'message' => 'Password saat ini tidak valid'
+                ], 422);
+            }
+
+            $user->password = Hash::make($request->password);
+        }
+
+        // Update name if provided
+        if ($request->filled('name')) {
+            $user->name = $request->name;
+        }
+
+        // Update email if provided
+        if ($request->filled('email')) {
+            $user->email = $request->email;
+            // Reset email verification if email changed
+            $user->email_verified_at = null;
+        }
+
+        $user->save();
+
+        // Load appropriate relationship based on role
+        $user->load($user->role);
+
+        return response()->json([
+            'message' => 'Profil berhasil diperbarui',
+            'user' => $user
+        ]);
     }
 
     public function adminCreateUser(Request $request)
@@ -166,5 +233,58 @@ class AuthController extends Controller
         $user->delete();
 
         return response()->json(['message' => 'Akun berhasil dihapus']);
+    }
+
+    public function adminShowPetugas($id)
+    {
+        // Cari user
+        $user = User::where('id', $id)->where('role', 'petugas')->first();
+
+        if (! $user) {
+            return response()->json([
+                'message' => 'Petugas tidak ditemukan.'
+            ], 404);
+        }
+
+        // Ambil biodata petugas jika ada
+        $biodata = Petugas::where('user_id', $user->id)->first();
+
+        return response()->json([
+            'message' => 'Detail biodata petugas',
+            'user' => $user,
+            'biodata' => $biodata ?? null
+        ]);
+    }
+
+    public function adminShowKurir($id)
+    {
+        // Cari user
+        $user = User::where('id', $id)->where('role', 'kurir')->first();
+
+        if (! $user) {
+            return response()->json([
+                'message' => 'Kurir tidak ditemukan.'
+            ], 404);
+        }
+
+        // Ambil biodata kurir jika ada
+        $biodata = Kurir::where('user_id', $user->id)->first();
+
+        return response()->json([
+            'message' => 'Detail biodata kurir',
+            'user' => $user,
+            'biodata' => $biodata ?? null
+        ]);
+    }
+
+
+    public function adminGetUsers()
+    {
+        $user = User::all();
+
+        return response()->json([
+            'message' => 'Daftar user',
+            'user' => $user
+        ]);
     }
 }

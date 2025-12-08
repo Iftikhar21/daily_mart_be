@@ -7,6 +7,7 @@ use App\Models\Stock;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use App\Models\DeliveryUpdate;
+use App\Models\Kurir;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use Illuminate\Support\Facades\DB;
@@ -327,6 +328,11 @@ class TransactionController extends Controller
 | 📦 MANAGEMENT PENGIRIMAN (Online Only)
 |--------------------------------------------------------------------------
 */
+    public function getKurirs(Request $request)
+    {
+        $kurirs = Kurir::with('user')->get();
+        return response()->json($kurirs);
+    }
 
     public function assignKurir(Request $request, $id)
     {
@@ -570,8 +576,10 @@ class TransactionController extends Controller
             return response()->json(['message' => 'Data petugas tidak ditemukan'], 400);
         }
 
-        $transactions = Transaction::with(['details.product', 'pelanggan', 'kurir'])
+        $transactions = Transaction::with(['details.product', 'pelanggan.user', 'kurir'])
             ->where('branch_id', $petugas->branch_id)
+            ->where('is_online', true)
+            ->where('status', '!=', 'completed')
             ->orderBy('created_at', 'desc')
             ->get();
 

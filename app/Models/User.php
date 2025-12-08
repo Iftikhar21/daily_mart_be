@@ -48,6 +48,12 @@ class User extends Authenticatable
         ];
     }
 
+    // Relasi ke admin
+    public function admin()
+    {
+        return $this->hasOne(Admin::class, 'user_id');
+    }
+
     // app/Models/User.php
     public function pelanggan()
     {

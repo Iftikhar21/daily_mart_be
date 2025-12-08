@@ -11,6 +11,13 @@ use Illuminate\Support\Facades\Http;
 
 class PelangganController extends Controller
 {
+
+    public function index()
+    {
+        $pelanggan = Pelanggan::with(['user', 'branch'])->get();
+        return response()->json($pelanggan);
+    }
+
     // 🟢 Get atau create pelanggan data
     public function show()
     {

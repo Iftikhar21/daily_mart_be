@@ -12,6 +12,7 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\StockRequestController;
 use App\Http\Controllers\KategoriProdukController;
 use App\Http\Controllers\FavoriteProductController;
+use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\PelangganProductController;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -84,6 +85,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Management Transaksi untuk Petugas
         // Route::put('/transactions/{id}/status', [TransactionController::class, 'updateStatus']); // ← HAPUS DARI SINI
         Route::get('/transactions/branch', [TransactionController::class, 'getBranchTransactions']);
+        Route::get("/kurirs ", [TransactionController::class, 'getKurirs']);
         Route::put('/transactions/{id}/assign-kurir', [TransactionController::class, 'assignKurir']);
         Route::put('/transactions/{id}/delivery-status', [TransactionController::class, 'updateDeliveryStatus']);
     });
@@ -115,6 +117,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:admin,petugas')->group(function () {
         Route::get('/products', [ProductController::class, 'index']);
         Route::get('/products/{id}', [ProductController::class, 'show']);
+        Route::get('/products/branch/{branch_id}', [ProductController::class, 'getByBranch']);
         Route::post('/products', [ProductController::class, 'store']);
         Route::put('/products/{id}', [ProductController::class, 'update']);
         Route::delete('/products/{id}', [ProductController::class, 'destroy']);
@@ -129,12 +132,19 @@ Route::middleware('auth:sanctum')->group(function () {
         // Branch Management
         Route::apiResource('branches', BranchController::class);
 
+        // User Management
+        Route::get('/user', [AuthController::class, 'adminGetUsers']);
+
         Route::post('/create-user', [AuthController::class, 'adminCreateUser']);
         Route::put('/update-user/{id}', [AuthController::class, 'adminUpdateUser']);
         Route::delete('/delete-user/{id}', [AuthController::class, 'adminDeleteUser']);
+        Route::get('/admin/petugas/{id}', [AuthController::class, 'adminShowPetugas']);
+        Route::get('/admin/kurir/{id}', [AuthController::class, 'adminShowKurir']);
 
         // Admin Management
         Route::apiResource('admins', AdminController::class)->except(['create', 'edit']);
+        Route::get('/admin/profile', [AuthController::class, 'profile']);
+        Route::put('/admin/profile', [AuthController::class, 'updateProfile']);
 
         // Petugas Management
         Route::get('/petugas', [PetugasController::class, 'index']);
@@ -144,6 +154,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/kurir', [KurirController::class, 'index']);
         Route::get('/kurir/{id}', [KurirController::class, 'show']);
         Route::delete('/kurir/{id}', [KurirController::class, 'destroy']);
+        
+        // Pelanggan Management
+        Route::get('/pelanggan', [PelangganController::class, 'index']);
 
         // Stock Request (Admin)
         Route::get('/stock-requests', [StockRequestController::class, 'index']);
@@ -156,6 +169,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // ✅ Kategori Produk Management
         Route::apiResource('kategori-produk', KategoriProdukController::class);
+
+        Route::prefix('laporan')->group(function () {
+            Route::get('/branches', [LaporanController::class, 'getBranches']);
+            Route::get('/branch-transactions', [LaporanController::class, 'getBranchTransactions']);
+            Route::get('/daily-sales', [LaporanController::class, 'getDailySales']);
+        });
+
+
     });
 
     Route::get('/categories', [KategoriProdukController::class, 'index']);
