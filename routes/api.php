@@ -17,8 +17,6 @@ use App\Http\Controllers\PelangganProductController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::get('/products', [ProductController::class, 'index']);
-
 
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -117,7 +115,7 @@ Route::middleware('auth:sanctum')->group(function () {
     |------------------------------------------------------------------
     */
     Route::middleware('role:admin,petugas')->group(function () {
-        // Route::get('/products', [ProductController::class, 'index']);
+        Route::get('/products', [ProductController::class, 'index']);
         Route::get('/products/{id}', [ProductController::class, 'show']);
         Route::get('/products/branch/{branch_id}', [ProductController::class, 'getByBranch']);
         Route::post('/products', [ProductController::class, 'store']);
