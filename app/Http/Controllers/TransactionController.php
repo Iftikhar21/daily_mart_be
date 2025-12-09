@@ -474,16 +474,23 @@ class TransactionController extends Controller
     public function getDeliveryUpdates($id)
     {
         $transaction = Transaction::where('is_online', true)
+            ->with(['pelanggan', 'kurir']) // penting agar user_id bisa dibaca
             ->findOrFail($id);
 
-        // Untuk kurir: hanya bisa lihat updates pesanan mereka
-        // Untuk pelanggan: hanya bisa lihat updates pesanan mereka
-        if (auth()->user()->role === 'kurir' && $transaction->kurir_id !== auth()->id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        $user = auth()->user();
+
+        // Kurir hanya bisa akses update miliknya
+        if ($user->role === 'kurir') {
+            if ($transaction->kurir?->user_id !== $user->id) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
         }
 
-        if (auth()->user()->role === 'user' && $transaction->pelanggan_id !== auth()->id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        // Pelanggan hanya bisa akses update pesanan yg dia buat
+        if ($user->role === 'user') {
+            if ($transaction->pelanggan?->user_id !== $user->id) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
         }
 
         $updates = DeliveryUpdate::with('kurir.user')
