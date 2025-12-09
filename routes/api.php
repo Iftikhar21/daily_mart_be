@@ -46,7 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Dashboard
         // Di routes/api.php
         Route::get('/pelanggan/products', [PelangganProductController::class, 'index']);
-        Route::get('/pelanggan/dashboard-products', [PelangganProductController::class, 'dashboardProducts']);
+        // Route::get('/pelanggan/dashboard-products', [PelangganProductController::class, 'dashboardProducts']);
 
         // Profile Pelanggan - AUTO CREATE jika belum ada
         Route::get('/pelanggan/profile', [PelangganController::class, 'show']);
