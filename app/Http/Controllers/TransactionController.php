@@ -50,9 +50,18 @@ class TransactionController extends Controller
 
     public function getCart(Request $request)
     {
-        $cartItems = Cart::with('product')
+        $cartItems = Cart::with('product', 'product.stocks')
             ->where('user_id', auth()->id())
             ->get();
+
+        $cartItems->map(function ($item) {
+            if ($item->product) {
+                $item->product->gambar_url = $item->product->gambar
+                    ? asset('storage/' . $item->product->gambar)
+                    : asset('images/no-image.png');
+            }
+            return $item;
+        });
 
         $total = 0;
         foreach ($cartItems as $item) {
