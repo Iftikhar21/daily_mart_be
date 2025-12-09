@@ -64,16 +64,12 @@ class KurirController extends Controller
 
         $request->validate([
             'no_hp' => 'nullable|string|max:20',
-            'alamat' => 'nullable|string|max:255',
-            'kendaraan' => 'nullable|string|max:100',
         ]);
 
         $kurir = Kurir::updateOrCreate(
             ['user_id' => $user->id],
             [
                 'no_hp' => $request->no_hp,
-                'alamat' => $request->alamat,
-                'kendaraan' => $request->kendaraan,
             ]
         );
 
