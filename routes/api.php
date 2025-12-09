@@ -91,7 +91,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/transactions/{id}/assign-kurir', [TransactionController::class, 'assignKurir']);
         Route::put('/transactions/{id}/delivery-status', [TransactionController::class, 'updateDeliveryStatus']);
 
-        Route::apiResource('branches', BranchController::class);
+        // Route::apiResource('branches', BranchController::class);
     });
 
     /*
@@ -125,6 +125,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/products', [ProductController::class, 'store']);
         Route::put('/products/{id}', [ProductController::class, 'update']);
         Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+        Route::apiResource('branches', BranchController::class);
     });
 
     /*
@@ -134,7 +135,6 @@ Route::middleware('auth:sanctum')->group(function () {
     */
     Route::middleware('role:admin')->group(function () {
         // Branch Management
-        Route::apiResource('branches', BranchController::class);
 
         // User Management
         Route::get('/user', [AuthController::class, 'adminGetUsers']);
