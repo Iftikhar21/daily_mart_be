@@ -608,7 +608,7 @@ class TransactionController extends Controller
         $orders = Transaction::with([
             'details.product',
             'branch',
-            'pelanggan',
+            'pelanggan.user',
             'kurir.user' // ⬅️ tambahkan ini untuk menampilkan nama kurir
         ])
             ->where('kurir_id', $kurir->id)
