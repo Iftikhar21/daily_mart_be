@@ -23,13 +23,24 @@ class PetugasController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // Ambil data petugas sekaligus relasi branch dan user
-        $petugas = Petugas::with(['branch', 'user'])->where('user_id', $user->id)->first();
+        // Ambil data petugas jika ada
+        $petugas = Petugas::with('branch')->where('user_id', $user->id)->first();
 
         if (!$petugas) {
-            return response()->json(['message' => 'Biodata belum diisi'], 404);
+            // Jika petugas belum ada, tetap kirim data user
+            return response()->json([
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ],
+                'branch_id' => null,
+                'no_hp' => null,
+                'branch' => null,
+            ]);
         }
 
+        // Jika petugas ada, kirim data petugas + relasi
         return response()->json($petugas);
     }
 
