@@ -24,7 +24,7 @@ class PetugasController extends Controller
         }
 
         // Ambil data petugas jika ada
-        $petugas = Petugas::with('branch')->where('user_id', $user->id)->first();
+        $petugas = Petugas::with('branch', 'user')->where('user_id', $user->id)->first();
 
         if (!$petugas) {
             // Jika petugas belum ada, tetap kirim data user
