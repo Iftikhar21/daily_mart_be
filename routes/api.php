@@ -86,6 +86,8 @@ Route::middleware('auth:sanctum')->group(function () {
         // Route::put('/transactions/{id}/status', [TransactionController::class, 'updateStatus']); // ← HAPUS DARI SINI
         Route::get('/transactions/branch', [TransactionController::class, 'getBranchTransactions']);
         Route::get("/kurirs ", [TransactionController::class, 'getKurirs']);
+        Route::get('/transactions/{id}/assign', [TransactionController::class, 'getTransactionForAssign']); // Untuk halaman assign kurir
+        Route::get('/transactions/{id}/detail', [TransactionController::class, 'getTransactionDetailForPetugas']); // Untuk detail umum
         Route::put('/transactions/{id}/assign-kurir', [TransactionController::class, 'assignKurir']);
         Route::put('/transactions/{id}/delivery-status', [TransactionController::class, 'updateDeliveryStatus']);
     });

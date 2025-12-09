@@ -35,7 +35,8 @@ class TransactionController extends Controller
             $transaction = Transaction::with([
                 'details.product',
                 'branch',
-                'pelanggan'
+                'pelanggan',
+                'pelanggan.user',
             ])->findOrFail($id);
         }
 
@@ -717,5 +718,66 @@ class TransactionController extends Controller
                 $remainingQty = 0;
             }
         }
+    }
+
+    // Di TransactionController.php - tambahkan method ini
+    public function getTransactionForAssign($id)
+    {
+        // Pastikan hanya petugas yang bisa mengakses
+        if (auth()->user()->role !== 'petugas') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $petugas = auth()->user()->petugas;
+        if (!$petugas) {
+            return response()->json(['message' => 'Data petugas tidak ditemukan'], 400);
+        }
+
+        // Ambil transaksi yang hanya dari branch petugas, online, dan status 'paid'
+        $transaction = Transaction::with([
+            'details.product',
+            'pelanggan.user', // Relasi pelanggan dan user
+            'branch'
+        ])
+            ->where('id', $id)
+            ->where('branch_id', $petugas->branch_id)
+            ->where('is_online', true)
+            ->where('status', 'paid') // Hanya transaksi yang sudah bayar
+            ->where('kurir_id', null) // Belum ada kurir yang ditugaskan
+            ->firstOrFail();
+
+        return response()->json([
+            'success' => true,
+            'data' => $transaction
+        ]);
+    }
+
+    // Method alternatif: get detail transaksi untuk petugas
+    public function getTransactionDetailForPetugas($id)
+    {
+        $petugas = auth()->user()->petugas;
+        if (!$petugas) {
+            return response()->json(['message' => 'Data petugas tidak ditemukan'], 400);
+        }
+
+        $transaction = Transaction::with([
+            'details.product',
+            'pelanggan.user',
+            'branch',
+            'kurir.user' // Jika sudah ada kurir yang ditugaskan
+        ])
+            ->where('id', $id)
+            ->where('branch_id', $petugas->branch_id)
+            ->where('is_online', true)
+            ->firstOrFail();
+
+        // Tentukan apakah petugas bisa assign kurir
+        $canAssignCourier = $transaction->status === 'paid' && $transaction->kurir_id === null;
+
+        return response()->json([
+            'success' => true,
+            'data' => $transaction,
+            'can_assign_courier' => $canAssignCourier
+        ]);
     }
 }
