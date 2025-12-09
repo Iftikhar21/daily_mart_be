@@ -538,6 +538,7 @@ class TransactionController extends Controller
 
         $transactions = Transaction::with([
             'details.product',
+            'pelanggan',
             'branch',
             'kurir.user',
             'deliveryUpdates.kurir.user'
