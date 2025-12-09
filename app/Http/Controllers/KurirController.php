@@ -6,6 +6,7 @@ use App\Models\Kurir;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class KurirController extends Controller
 {
@@ -63,18 +64,39 @@ class KurirController extends Controller
         $user = Auth::user();
 
         $request->validate([
-            'no_hp' => 'nullable|string|max:20',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'no_hp' => 'required|string|max:20',
+            'current_password' => 'nullable|string',
+            'password' => 'nullable|string|min:6|confirmed',
         ]);
 
+        // --- Update ke tabel users ---
+        $user->name = $request->name;
+        $user->email = $request->email;
+
+        // Jika ganti password
+        if ($request->filled('password')) {
+            if (!Hash::check($request->current_password, $user->password)) {
+                return response()->json([
+                    'message' => 'Password saat ini salah'
+                ], 400);
+            }
+
+            $user->password = Hash::make($request->password);
+        }
+
+        $user->save();
+
+        // --- Update atau create kurir ---
         $kurir = Kurir::updateOrCreate(
             ['user_id' => $user->id],
-            [
-                'no_hp' => $request->no_hp,
-            ]
+            ['no_hp' => $request->no_hp]
         );
 
         return response()->json([
-            'message' => 'Profile updated successfully',
+            'message' => 'Profil berhasil diperbarui',
+            'user' => $user,
             'kurir' => $kurir
         ]);
     }
