@@ -90,6 +90,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/transactions/{id}/detail', [TransactionController::class, 'getTransactionDetailForPetugas']); // Untuk detail umum
         Route::put('/transactions/{id}/assign-kurir', [TransactionController::class, 'assignKurir']);
         Route::put('/transactions/{id}/delivery-status', [TransactionController::class, 'updateDeliveryStatus']);
+
+        Route::apiResource('branches', BranchController::class);
     });
 
     /*
