@@ -16,9 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
 
         // Middleware Sanctum untuk API
-        $middleware->api(prepend: [
-            EnsureFrontendRequestsAreStateful::class,
-        ]);
+        // $middleware->api(prepend: [
+        //     EnsureFrontendRequestsAreStateful::class,
+        // ]);
 
         // ✅ Daftarkan alias middleware kustom 
         $middleware->alias([
